@@ -1,4 +1,4 @@
-from models import Entity
+from src.extraction.models import Entity
 
 class EntityResolver:
     """Normalization and detecting duplicate entities across a user's profile."""

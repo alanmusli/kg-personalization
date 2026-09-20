@@ -23,7 +23,7 @@ class GraphBuilder:
             all_entities.extend(result.entities)
             all_relations.extend(result.relations)
 
-            movie_title = item.get("title", "Unknown Movie")
+            movie_title = item.get("title") or item.get("description", "")[:40] or f"Item_{item.get('id', 'unknown')}"
             tag = item.get("tag", "")
             rating = float(item.get("rating", 0))
 
@@ -33,6 +33,15 @@ class GraphBuilder:
                 target_label="Movie", target_key="title", target_val=movie_title,
                 rel_props={"tag": tag, "rating": rating}
             )
+
+            for entity in result.entities:
+                self.db.create_relationship(
+                    source_label="Movie", source_key="title", source_val=movie_title,
+                    rel_type="HAS_FEATURE",
+                    target_label=entity.type if entity.type else "Entity",
+                    target_key="name", target_val=entity.name,
+                    rel_props={}
+                )
 
         resolved_entities = self.resolver.resolve_batch(all_entities)
 
@@ -74,13 +83,19 @@ class GraphBuilder:
         })
 
     def create_relation(self, relation: Relation):
+        raw_rel = relation.relation if relation.relation else "RELATED_TO"
+        clean_rel_type = raw_rel.replace(".", "_").replace("-", "_").replace(" ", "_").upper()
+
+        source_label = relation.source_type if relation.source_type else "Entity"
+        target_label = relation.target_type if relation.target_type else "Entity"
+
         self.db.create_relationship(
-            source_label=relation.source_type,
+            source_label=source_label,
             source_key="title" if relation.source_type == "Movie" else "name",
             source_val=relation.source,
-            rel_type=relation.relation,
-            target_label=relation.target_type,
-            target_key="title" if relation.target_type == "Movie" else "name",
+            rel_type=clean_rel_type,
+            target_label=target_label,
+            target_key="title" if target_label == "Movie" else "name",
             target_val=relation.target,
             rel_props=relation.properties
         )
