@@ -1,8 +1,7 @@
+import re
 from sklearn.metrics import accuracy_score, f1_score
 from src.data_loader.dataset_parser import DataParser
 from src.inference.llm_client import run_baseline, run_rag, run_kg_rag
-
-# 1. Нови импорти за поврзување со базата
 from src.graph.neo_client import Neo4jClient
 from src.retrieval.context_builder import ContextBuilder
 
@@ -13,6 +12,12 @@ def print_results_table(results: dict):
     for system, metrics in results.items():
         print(f"{system:<15} | {metrics['accuracy']:<12.4f} | {metrics['macro_f1']:<12.4f}")
     print("=" * 50 + "\n")
+
+def clean_tag(tag: str) -> str:
+    tag = str(tag).lower().strip()
+    tag = re.sub(r'[^a-z0-9\s-]', '', tag) # Remove quotes, periods, etc.
+    return tag
+
 
 def evaluate_all():
     parser = DataParser(
@@ -55,8 +60,11 @@ def evaluate_all():
                 # Праќање на контекстот кон LLM клиентот
                 pred = run_kg_rag(user_id, query, kg_context)
 
-            predictions.append(str(pred).strip().lower())
-            ground_truth.append(str(expected).strip().lower())
+            pred_clean = clean_tag(pred)
+            expected_clean = clean_tag(expected)
+
+            predictions.append(pred_clean)
+            ground_truth.append(expected_clean)
 
         results[system_name] = {
             "accuracy": accuracy_score(ground_truth, predictions),

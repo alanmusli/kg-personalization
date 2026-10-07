@@ -1,7 +1,9 @@
-from src.graph.neo_client import Neo4jClient
 from src.extraction.entity_extractor import EntityExtractor
 from src.extraction.resolver import EntityResolver
 from src.extraction.models import Entity, Relation
+from config.schema import EntityType, RelationType, map_to_relation_type
+from src.graph.neo_client import Neo4jClient
+
 
 
 class GraphBuilder:
@@ -35,10 +37,12 @@ class GraphBuilder:
             )
 
             for entity in result.entities:
+                clean_target_label = (entity.type if entity.type else "Entity").replace(" ", "").replace("-", "")
+
                 self.db.create_relationship(
                     source_label="Movie", source_key="title", source_val=movie_title,
                     rel_type="HAS_FEATURE",
-                    target_label=entity.type if entity.type else "Entity",
+                    target_label=clean_target_label,
                     target_key="name", target_val=entity.name,
                     rel_props={}
                 )
@@ -54,11 +58,11 @@ class GraphBuilder:
         self.build_preference_edges(user_id)
 
     def build_preference_edges(self, user_id: str):
-        query = """
-        MATCH (u:User {user_id: $uid})-[r:REVIEWED]->(m:Movie)-[:HAS_GENRE]->(g:Genre)
-        WITH u, g, COUNT(m) as strength, AVG(r.rating) as avg_rating
-        MERGE (u)-[p:PREFERS_GENRE]->(g)
-        SET p.strength = strength, p.avg_rating = avg_rating
+        query = f"""
+                MATCH (u:User {{user_id: $uid}})-[r:{RelationType.REVIEWED.value}]->(m:Movie)-[:{RelationType.HAS_GENRE.value}]->(g:Genre)
+                WITH u, g, COUNT(m) as strength, AVG(r.rating) as avg_rating
+                MERGE (u)-[p:{RelationType.PREFERS_GENRE.value}]->(g)
+                SET p.strength = strength, p.avg_rating = avg_rating
         """
 
         self.db.run_query(query, {"uid": user_id})
@@ -72,19 +76,28 @@ class GraphBuilder:
         return f"Movie: {title}\nDescription: {description}\nUser applied tag: {tag}"
 
     def create_entity_node(self, entity: Entity):
+        clean_type = (entity.type if entity.type else "Entity").replace(" ", "").replace("-", "")
+        safe_props = dict(entity.properties) if entity.properties else {}
+        safe_props.pop("name", None)
+        safe_props.pop("title", None)
+        safe_props.pop("id", None)
+
+        key_name = "title" if clean_type == "Movie" else "name"
+
         query = f"""
-        MERGE (n:{entity.type} {{name: $name}})
-        SET n += $props
-        """
+                MERGE (n:{clean_type} {{{key_name}: $name}})
+                SET n += $props
+                """
 
         self.db.run_query(query, {
             "name": entity.name,
-            "props": entity.properties
+            "props": safe_props
         })
+
 
     def create_relation(self, relation: Relation):
         raw_rel = relation.relation if relation.relation else "RELATED_TO"
-        clean_rel_type = raw_rel.replace(".", "_").replace("-", "_").replace(" ", "_").upper()
+        enum_rel_type = map_to_relation_type(raw_rel)
 
         source_label = relation.source_type if relation.source_type else "Entity"
         target_label = relation.target_type if relation.target_type else "Entity"
@@ -93,9 +106,9 @@ class GraphBuilder:
             source_label=source_label,
             source_key="title" if relation.source_type == "Movie" else "name",
             source_val=relation.source,
-            rel_type=clean_rel_type,
+            rel_type=enum_rel_type.value,
             target_label=target_label,
             target_key="title" if target_label == "Movie" else "name",
             target_val=relation.target,
-            rel_props=relation.properties
+            rel_props=relation.properties or {}
         )

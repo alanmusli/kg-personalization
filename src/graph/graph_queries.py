@@ -1,13 +1,13 @@
 
 # Query 1: Get user's genre preferences (ranked by strength)
 USER_GENRE_PREFS = """
-MATCH (u:User {user_id: $uid})-[p:PREFERS_GENRE]->(g:Genre)
-RETURN g.name AS genre, p.strength AS count, p.avg_rating AS avg_rating
-ORDER BY p.strength DESC
+MATCH (u:User {user_id: $uid})-[r:REVIEWED]->(m:Movie)-[:HAS_GENRE]->(g:Genre)
+RETURN g.name AS genre, COUNT(m) AS count, AVG(r.rating) AS avg_rating
+ORDER BY count DESC
 LIMIT 10
 """
 
-# Query 2: Find movies similar to a query movie via shared attributes
+# Query 2: Pronajdi filmovi so pomos na spodeleni atributi
 SIMILAR_MOVIES_BY_USER = """
 MATCH (u:User {user_id: $uid})-[r:REVIEWED]->(m:Movie)
 WHERE m.title CONTAINS $query_term OR
@@ -21,7 +21,7 @@ ORDER BY r.rating DESC
 LIMIT 5
 """
 
-# Query 3: Multi-hop — find user's sentiment toward specific themes
+# Query 3: Multi-hop find users sentiment toward specific themes
 USER_THEME_SENTIMENT = """
 MATCH (u:User {user_id: $uid})-[r:REVIEWED]->(m:Movie)-[:HAS_THEME]->(t:Theme)
 WHERE t.name IN $query_themes

@@ -15,16 +15,23 @@ User's past interactions:
 New input: {query}
 Tag:"""
 
-# System C: KG-RAG
-KG_RAG_PROMPT = """You are a personalization engine. Use the user's structured
-preference profile below to predict how this specific user would tag the
-following item.
+#System C: KG-RAG
+KG_RAG_PROMPT = """You are a movie tagging classification system.
 
-USER PREFERENCE PROFILE (from Knowledge Graph):
+Your task is to select the SINGLE most accurate tag for a NEW movie description from the user's ALLOWED CANDIDATE TAGS list.
+
+USER KNOWLEDGE GRAPH CONTEXT:
 {kg_context}
 
-NEW ITEM TO TAG:
-{query}
+ALLOWED CANDIDATE TAGS (MANDATORY: You MUST select your answer strictly from this list):
+[{candidate_tags}]
 
-Based on this user's demonstrated preferences, patterns, and past tagging
-behavior, predict the most appropriate tag. Respond with only the tag."""
+NEW MOVIE DESCRIPTION:
+"{query}"
+
+CRITICAL RULES:
+1. Choose EXACTLY ONE tag from the ALLOWED CANDIDATE TAGS list above that best fits the movie description.
+2. DO NOT invent new tags or synonyms that are not in the candidate list.
+3. Output ONLY the chosen tag verbatim. No explanations, no quotes, no extra words.
+
+Selected Tag:"""

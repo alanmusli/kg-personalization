@@ -1,7 +1,7 @@
 from src.extraction.models import Entity
 
 class EntityResolver:
-    """Normalization and detecting duplicate entities across a user's profile."""
+    """Normalizacija i pronaogjanje duplikat entiteti vo profil na user."""
 
     def __init__(self):
         self.entity_map = {}
@@ -18,6 +18,7 @@ class EntityResolver:
         self.entity_map[key] = normalized
         return normalized
 
+    #deduplikacija
     def resolve_batch(self, entities: list[Entity]) -> list[Entity]:
         seen = {}
         resolved = []

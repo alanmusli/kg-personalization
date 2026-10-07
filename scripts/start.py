@@ -22,13 +22,13 @@ def main():
     user_profiles = parser.get_user_profiles(questions)
 
     total_users = len(user_profiles)
-    print(f"📦 Loaded {total_users} user profiles from LaMP-2 dev split.")
+    print(f"Loaded {total_users} user profiles from LaMP-2 dev split.")
 
     start_time = time.time()
 
     # 3. Populate Neo4j Graph User-by-User
     for idx, (user_id, profile_items) in enumerate(
-        list(user_profiles.items())[:30], start=1
+        list(user_profiles.items())[:50], start=1
     ):
         check_query = "MATCH (u:User {user_id: $uid}) RETURN u LIMIT 1"
         is_processed = neo4j_client.run_query(check_query, {"uid": user_id})
@@ -36,7 +36,7 @@ def main():
         if is_processed:
             print(f"[{idx}/{total_users}] The users {user_id} is already in the database...")
             continue
-            
+
         print(
             f"[{idx}/{total_users}] Building graph for user ID: {user_id}..."
         )
@@ -44,13 +44,12 @@ def main():
         try:
             builder.build_user_graph(user_id, profile_items)
         except Exception as e:
-            print(f"⚠️ Failed to build graph for user {user_id}: {e}")
+            print(f"Failed to build graph for user {user_id}: {e}")
             continue
 
     elapsed = time.time() - start_time
     print(f"\n Knowledge Graph construction complete in {elapsed:.2f}s!")
 
-    # Close Neo4j driver connection cleanly
     neo4j_client.close()
 
 
