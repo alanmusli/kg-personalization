@@ -13,7 +13,7 @@ Make sure you have the following installed on your machine:
 
 ---
 
-## 🛠️ Installation & Setup Guide
+## Installation & Setup Guide
 
 ### 1. Clone the Repository & Setup Environment
 ```bash
